@@ -1,0 +1,4 @@
+name = Growing together custom module
+description = "Custom module"
+core = 7.x
+

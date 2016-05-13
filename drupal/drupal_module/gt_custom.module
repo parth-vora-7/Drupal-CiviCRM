@@ -1,0 +1,72 @@
+<?php
+
+// Include necessary files
+module_load_include('inc', 'gt_custom', '/includes/gt_custom_block');
+module_load_include('inc', 'gt_custom', '/includes/gt_custom_menu');
+module_load_include('inc', 'gt_custom', '/includes/gt_custom_form');
+module_load_include('inc', 'gt_custom', '/includes/gt_custom_theme');
+module_load_include('inc', 'gt_custom', '/includes/gt_custom_views');
+module_load_include('inc', 'gt_custom', 'gt_custom_common');
+module_load_include('inc', 'gt_custom', 'civi_conn');
+  
+/**
+ * Implements hook_init().
+ */
+
+function gt_custom_init() {
+  // Change the language to Welsh if selected country is Wales
+  global $language;
+  $arg = arg();
+
+  if(isset($arg[0]) && isset($arg[1]) && $_SERVER['QUERY_STRING'] != 'language=en' && (strpos($_SERVER['REQUEST_URI'], 'admin') === false)) {
+    if ($arg[0] ==  "country" && $arg[1] == 4 && $language->language != 'cy' ) {
+      $_SESSION['language'] = 'cy';
+      $path = 'country/4';
+      drupal_goto($path);
+    }
+  } 
+}
+
+/**
+ * Implements hook_permission().
+ * @return $item array permission array
+ */
+
+function gt_custom_permission() {
+  $item['social media links'] = array(    
+    'title' => t('Social media links'),
+    'description' => t('Allow user to change social media links'),
+  );
+  return $item;
+}
+
+/**
+ * Implements hook_cron().
+ */
+
+function gt_custom_cron() {
+  gt_custom_archive();
+}
+
+/**
+ * Cron function to archive old events
+ */
+
+function gt_custom_archive() {
+  $archive_timeline = variable_get('archive_timeline'); 
+  $event_nodes = db_select('node', 'n')
+    -> fields('n', array('nid','created'))
+    -> condition('type','event')
+    -> condition('status',1)
+    -> execute()
+    -> fetchAll();
+  foreach($event_nodes as $enode) {
+    $node_created = date('Y-m-d H:i', $enode->created);
+    if($node_created < $archive_timeline) {
+      $node = node_load($enode->nid);
+      $node_wrapper = entity_metadata_wrapper('node', $node);
+      $node_wrapper->field_archive->set(1);
+      $node_wrapper->save();
+    }
+  }
+}
